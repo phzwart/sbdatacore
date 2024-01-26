@@ -82,3 +82,18 @@ def test_mixit():
         fs, orphan = parse_file_list(fl[0])
         for item in fs:
             assert (str(item)) in str(fl[1])
+def test_mixit2():
+    test_cases = [
+
+        (['Pin1_0_00002.jpg', 'Pin1_0_00001.cbf', 'Pin1_0_00002.txt',
+          'Pin1_0_00002.cbf', 'Pin1_0_00001.txt', 'Pin1_0_00001.jpg']
+        ,
+        [('Pin1_0_#####.jpg', "1-2"),
+         ('Pin1_0_#####.cbf', "1-2"),
+         ('Pin1_0_#####.txt', "1-2")]
+         )
+    ]
+    for fl in test_cases:
+        fs, orphan = parse_file_list(fl[0])
+        for item in fs:
+            assert (str(item)) in str(fl[1])

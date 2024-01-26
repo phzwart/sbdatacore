@@ -75,5 +75,19 @@ def simulate_ALS_runs():
                 touch(this_tmp)
 
 
+def build_fake_database(filename):
+    f = open(filename, 'w')
+    userdatabase="""#NERSC FACILITY
+kharris kamala
+mpence mike
+mpence mikey"""
+    print(userdatabase,file=f)
+
+
+
+
+
+
 if __name__ == "__main__":
+    build_fake_database("data.base")
     simulate_ALS_runs()

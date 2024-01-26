@@ -196,37 +196,39 @@ def group_files_by_pattern(file_names):
     Returns:
     dict: A dictionary grouping files by their base name pattern.
     """
-    base_name_info = defaultdict(lambda: {"max_digits": 0, "files": [], "extension": "", "has_leading_zeros": False})
+    base_name_info = defaultdict(lambda: {"max_digits": 0, "files": [], "has_leading_zeros": False})
 
     for file in file_names:
         match = re.search(r'(\d+)(\.[^.]+)$', file)
         if match:
             numeric_part, extension = match.groups()
-            base_name = file[:-len(numeric_part+extension)]  # Extract base name without numeric part and extension
-            max_digits = max(base_name_info[base_name]["max_digits"], len(numeric_part))
-            has_leading_zeros = base_name_info[base_name]["has_leading_zeros"] or numeric_part.startswith("0")
+            base_name = file[:-len(numeric_part+extension)]
+            max_digits = max(base_name_info[(base_name, extension)]["max_digits"], len(numeric_part))
+            has_leading_zeros = base_name_info[(base_name, extension)]["has_leading_zeros"] or numeric_part.startswith("0")
 
-            base_name_info[base_name]["max_digits"] = max_digits
-            base_name_info[base_name]["files"].append(file)
-            base_name_info[base_name]["extension"] = extension
-            base_name_info[base_name]["has_leading_zeros"] = has_leading_zeros
+            base_name_info[(base_name, extension)]["max_digits"] = max_digits
+            base_name_info[(base_name, extension)]["files"].append(file)
+            base_name_info[(base_name, extension)]["has_leading_zeros"] = has_leading_zeros
         else:
             base_name_info[None]["files"].append(file)  # Files that do not match the pattern
 
     grouped_files = {}
     for key, value in base_name_info.items():
         if key is None:
+            # Handle the None key separately
             grouped_files[key] = value["files"]
         else:
-            # Apply the appropriate number of wildcards
+            # Unpack the key into base_name and extension
+            base_name, extension = key
             if value["has_leading_zeros"]:
                 wildcard = '#' * value["max_digits"]
             else:
                 wildcard = '#'
-            wildcard_pattern = key + wildcard + value["extension"]
+            wildcard_pattern = base_name + wildcard + extension
             grouped_files[wildcard_pattern] = value["files"]
 
     return grouped_files
+
 
 def parse_file_list(file_names):
     """

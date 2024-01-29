@@ -28,16 +28,16 @@ def list_dirs_with_file_count(startpath):
     - The 'ranges' module must be correctly implemented and imported for the file range summary to work.
     - This function is recursive and may not be suitable for directories with extremely deep hierarchies.
     """
+
     tree = {}
 
     for root, dirs, files in os.walk(startpath):
-        # Creating a pointer to a dictionary that represents the current node
         pointer = tree
         for part in root[len(startpath):].lstrip(os.sep).split(os.sep):
             pointer = pointer.setdefault(part, {})
         pointer['_files'] = files
 
-    def print_tree(current_tree, prefix=''):
+    def build_tree_string(current_tree, prefix='', result=''):
         entries = list(current_tree.items())
         entries_count = len(entries)
 
@@ -46,25 +46,26 @@ def list_dirs_with_file_count(startpath):
                 continue
 
             connector = '└── ' if i == entries_count - 1 else '├── '
-            if len(value.get('_files', []))> 0:
-                print(f"{prefix}{connector}{key}/ ({len(value.get('_files', []))} files)")
-            else:
-                print(f"{prefix}{connector}{key}/")
+            line = f"{prefix}{connector}{key}/ ({len(value.get('_files', []))} files)" if len(value.get('_files', [])) > 0 else f"{prefix}{connector}{key}/"
+            result += line + '\n'
 
             if value.get('_files'):
                 file_indent = prefix + ('    ' if i == entries_count - 1 else '│   ')
                 s, o = ranges.parse_file_list(value['_files'])
                 for f_s in s:
-                    print(f"{file_indent}    {f_s}")
+                    result += f"{file_indent}    {f_s}\n"
                 for f_o in o:
-                    print(f"{file_indent}    {f_o}")
+                    result += f"{file_indent}    {f_o}\n"
 
             if isinstance(value, dict):
                 ext = '    ' if i == entries_count - 1 else '│   '
-                print_tree(value, prefix=prefix + ext)
+                result = build_tree_string(value, prefix=prefix + ext, result=result)
 
-    # Print from the root
-    print_tree(tree)
+        return result
+
+    # Generate the tree string from the root
+    return build_tree_string(tree)
 
 if __name__ == "__main__":
-    list_dirs_with_file_count("./")
+    tree_string = list_dirs_with_file_count("./")
+    print(tree_string)

@@ -163,13 +163,16 @@ class renaming_object(object):
         """
 
         print("Moving files")
+        print(self.file_moves)
         for source, target_directory in self.file_moves:
             if not os.path.exists(target_directory):
                 os.makedirs(target_directory)
             shutil.move(str(source), str(target_directory))
 
         print("Moving directories with derived data")
+        print(self.dir_moves)
         for source, target_directory in self.dir_moves:
+            print(source, target_directory)
             if not os.path.exists(target_directory):
                 os.makedirs(target_directory)
             shutil.move(str(source), str(target_directory))
@@ -235,8 +238,10 @@ class renaming_object(object):
                     this_path = os.path.join(source_path, location)
                     if os.path.isdir(this_path):
                         file_list = os.listdir(this_path)
-                        # print(file_list)
+                        print(this_path)
+                        print(file_list)
                         for f in file_list:
+                            print(sample_id, f, sample_id in f)
                             if sample_id in f:
                                 target = self.create_file_destination(source_path, location, sample_id)
                                 s = os.path.join(this_path, f)
@@ -262,6 +267,7 @@ class renaming_object(object):
                                                                              sample_id,
                                                                              this_method
                                                                              )
+                                    print(s, dir_target)
                                     dir_moves.append((s, dir_target))
         return files_moves, dir_moves
 

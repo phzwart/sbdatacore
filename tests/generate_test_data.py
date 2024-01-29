@@ -14,8 +14,8 @@ def touch(file_path):
         os.utime(file_path, None)
 
 
-def build_ALS_data(user, date, puck, pin, collect, screen_sets, collect_sets):
-    screen_path = os.path.join("./", user, date, puck, "screen")
+def build_ALS_data(base_dir, user, date, puck, pin, collect, screen_sets, collect_sets):
+    screen_path = os.path.join(base_dir, user, date, puck, "screen")
     screen_files = []
     screen_exts = ["cbf", "txt", "jpg"]
 
@@ -31,7 +31,7 @@ def build_ALS_data(user, date, puck, pin, collect, screen_sets, collect_sets):
     dials_path = None
 
     if collect:
-        data_path = os.path.join("./", user, date, puck, "collect")
+        data_path = os.path.join(base_dir, user, date, puck, "collect")
         data_files = []
         for ii in range(1, collect_sets + 1):
             base_name = pin + "_%i_#####.cbf" % ii
@@ -51,29 +51,36 @@ def build_ALS_data(user, date, puck, pin, collect, screen_sets, collect_sets):
     }
     return package
 
-
-def simulate_ALS_runs():
+def simulate_ALS_runs(base_dir):
+    base_dir = os.path.join(base_dir, "incoming")
+    print("---->", base_dir)
     users = ["kamala", "kamala", "mike", "mike", "mike"]
     dates = ["12323", "121223", "010124", "021224", "021224"]
     pucks = ["snoopy", "peanut", "mother", "mother", "mother"]
     pins = ["Pin1", "Pin2", "Pin1", "Pin2", "Pin3"]
     collect = [True, True, False, True, True]
     for u, d, pu, pi, c in zip(users, dates, pucks, pins, collect):
-        tmp = build_ALS_data(u, d, pu, pi, c, 1, 1)
-        if tmp['screen_path'] is not None:
-            os.makedirs(tmp['screen_path'], exist_ok=True)
+        tmp = build_ALS_data(base_dir, u, d, pu, pi, c, 1, 1)
+        print(">>>",tmp)
+        screen_path = tmp['screen_path']
+        if screen_path is not None:
+            os.makedirs(screen_path, exist_ok=True)
             for f in tmp['screen_files']:
-                this_tmp = os.path.join(tmp['screen_path'], f)
+                this_tmp = os.path.join(screen_path, f)
                 touch(this_tmp)
 
-        if tmp['collect_path'] is not None:
-            os.makedirs(tmp['collect_path'], exist_ok=True)
-            os.makedirs(tmp['xds_path'], exist_ok=True)
-            os.makedirs(tmp['dials_path'], exist_ok=True)
+        collect_path = tmp['collect_path'] if tmp['collect_path'] else None  # Update the path
+        if collect_path is not None:
+            print(collect_path, tmp['xds_path'])
+            os.makedirs(collect_path, exist_ok=True)
+            os.makedirs(os.path.join(tmp['xds_path']), exist_ok=True)
+            os.makedirs(os.path.join(tmp['dials_path']), exist_ok=True)
+            touch(os.path.join(tmp['xds_path'], "results.txt"))
+            touch(os.path.join(tmp['dials_path'], "results.txt"))
+
             for f in tmp['collect_files']:
-                this_tmp = os.path.join(tmp['collect_path'], f)
+                this_tmp = os.path.join(collect_path, f)
                 touch(this_tmp)
-
 
 def build_fake_database(filename):
     f = open(filename, 'w')
@@ -89,5 +96,7 @@ mpence mikey"""
 
 
 if __name__ == "__main__":
-    build_fake_database("data.base")
-    simulate_ALS_runs()
+    os.makedirs("sbdatacore_test/incoming", exist_ok=True)  # Create incoming directory
+    os.makedirs("sbdatacore_test/data", exist_ok=True)      # Create data directory
+    build_fake_database("sbdatacore_test/data.base")        # Update the database file path
+    simulate_ALS_runs("sbdatacore_test/")

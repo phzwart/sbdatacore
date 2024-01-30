@@ -41,4 +41,11 @@ setup(
     url='https://github.com/phzwart/sbdatacore',
     version='0.1.0',
     zip_safe=False,
+
+    entry_points={
+        'console_scripts': [
+            'sbdatacore.handout-als = scripts.handout_ALS_data:main'
+        ],
+    },
+
 )

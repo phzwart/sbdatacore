@@ -355,8 +355,6 @@ def process_ALS_data(top_directory, database, incoming="incoming", data="data/us
         for level in obj.top_levels:
             permissions.set_permissions(level, storage_user_name)
             tmp = permissions.check_permissions(level)
-            for _ in tmp:
-                print(_)
 
     n_files = count_files_in_subdirectories(directory)
     print("We have %i files left" % n_files)

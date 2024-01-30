@@ -1,7 +1,8 @@
 import os
-import parse_udb
-import ranges
 import shutil
+from sbdatacore import parse_udb, ranges, dates, permissions
+
+import os
 
 
 def count_files_in_subdirectories(directory):
@@ -41,7 +42,7 @@ def remove_empty_subdirectories(directory):
             if not os.listdir(full_dir_path):
                 # Remove the empty subdirectory
                 os.rmdir(full_dir_path)
-                print(f"Removed empty directory: {full_dir_path}")
+                #print(f"Removed empty directory: {full_dir_path}")
 
 
 def list_paths_at_specific_depth(root_dir, target_depth=4):
@@ -75,25 +76,33 @@ def list_paths_at_specific_depth(root_dir, target_depth=4):
     _traverse(root_dir, 0)
     return unique_paths
 
-
-def parse_path(this_path):
+def parse_path(this_path, root_end="incoming"):
     """
     Parse a given path and extract components such as root directory, user name, date, etc.
 
     Args:
     this_path (str): The path to be parsed.
+    root_end (str): The predefined value where the root directory ends.
 
     Returns:
     dict: A dictionary containing the parsed components of the path.
     """
-    keys = this_path.split("/")
-    root_dir = keys[0]
-    facility_user_name = keys[1]
-    date = keys[2]
-    puck = keys[3]
-    dir_type = None
-    if len(keys) > 4:
-        dir_type = keys[4]
+    # Find the index of the root_end in the path
+    root_end_index = this_path.find(root_end)
+    if root_end_index == -1:
+        raise ValueError(f"The root_end '{root_end}' not found in the path.")
+
+    # Include the length of the root_end to get the full root directory
+    root_dir = this_path[:root_end_index + len(root_end)]
+
+    # Extract the remaining path components
+    remaining_path = this_path[root_end_index + len(root_end):].strip("/")
+    keys = remaining_path.split("/")
+
+    facility_user_name = keys[0] if len(keys) > 0 else None
+    date = keys[1] if len(keys) > 1 else None
+    puck = keys[2] if len(keys) > 2 else None
+    dir_type = keys[3] if len(keys) > 3 else None
 
     result = {
         "root": root_dir,
@@ -143,6 +152,7 @@ class renaming_object(object):
             extensions_of_interest = ["edf", "img", "cbf"]
         if locations is None:
             locations = ["screen", "collect"]
+        self.dates = []
         self.facility_user_name = facility_user_name
         self.storage_user_name = storage_user_name
         self.origin_paths = origin_paths
@@ -155,6 +165,13 @@ class renaming_object(object):
         self.inventory = self.make_inventory()
         self.file_moves, self.dir_moves = self.create_move_list()
 
+
+        tmp = os.path.join(self.destination_root, self.storage_user_name, "ALS", )
+        self.top_levels = []
+        for this_date in self.dates:
+            self.top_levels.append(os.path.join(tmp, this_date))
+
+
     def execute_move(self):
         """
         Execute the process of moving files and directories from the source to the target destinations.
@@ -163,16 +180,13 @@ class renaming_object(object):
         """
 
         print("Moving files")
-        print(self.file_moves)
         for source, target_directory in self.file_moves:
             if not os.path.exists(target_directory):
                 os.makedirs(target_directory)
             shutil.move(str(source), str(target_directory))
 
         print("Moving directories with derived data")
-        print(self.dir_moves)
         for source, target_directory in self.dir_moves:
-            print(source, target_directory)
             if not os.path.exists(target_directory):
                 os.makedirs(target_directory)
             shutil.move(str(source), str(target_directory))
@@ -189,9 +203,17 @@ class renaming_object(object):
         Returns:
         str: The newly created destination path for the file.
         """
-        root, username, date, puck_id = source_path.split("/")
-        new_path = os.path.join(self.destination_root, self.storage_user_name, self.facility, date, puck_id, sample,
+        tmp = parse_path(source_path)
+        new_path = os.path.join(self.destination_root,
+                                self.storage_user_name,
+                                self.facility,
+                                dates.convert_mdy(tmp['date']),
+                                tmp['puck'],
+                                sample,
                                 location)
+        this_date = dates.convert_mdy(tmp['date'])
+        if this_date not in self.dates:
+            self.dates.append(this_date)
         return new_path
 
     def create_dir_destination(self, source_path, location, sample, append):
@@ -208,14 +230,18 @@ class renaming_object(object):
         Returns:
         str: The newly created destination path for the directory.
         """
-        root, username, date, puck_id = source_path.split("/")
+        tmp = parse_path(source_path)
         new_path = os.path.join(self.destination_root,
                                 self.storage_user_name,
                                 self.facility,
-                                date, puck_id,
+                                dates.convert_mdy(tmp['date']),
+                                tmp['puck'],
                                 sample,
                                 location,
                                 append)
+        this_date = dates.convert_mdy(tmp['date'])
+        if this_date not in self.dates:
+            self.dates.append(this_date)
         return new_path
 
     def create_move_list(self):
@@ -238,10 +264,7 @@ class renaming_object(object):
                     this_path = os.path.join(source_path, location)
                     if os.path.isdir(this_path):
                         file_list = os.listdir(this_path)
-                        print(this_path)
-                        print(file_list)
                         for f in file_list:
-                            print(sample_id, f, sample_id in f)
                             if sample_id in f:
                                 target = self.create_file_destination(source_path, location, sample_id)
                                 s = os.path.join(this_path, f)
@@ -267,7 +290,6 @@ class renaming_object(object):
                                                                              sample_id,
                                                                              this_method
                                                                              )
-                                    print(s, dir_target)
                                     dir_moves.append((s, dir_target))
         return files_moves, dir_moves
 
@@ -298,7 +320,7 @@ class renaming_object(object):
         return bucket
 
 
-def process_ALS_data(directory, database):
+def process_ALS_data(top_directory, database, incoming="incoming", data="data/users"):
     """
     Main function to orchestrate the file and directory management process.
 
@@ -306,6 +328,8 @@ def process_ALS_data(directory, database):
     directory (str): The directory to process.
     database (str): The database file path used for user-related data.
     """
+    directory = os.path.join(top_directory, incoming)
+    data_directory = os.path.join(top_directory, data)
 
     n_files = count_files_in_subdirectories(directory)
     print("We start with %i file" % n_files)
@@ -324,8 +348,15 @@ def process_ALS_data(directory, database):
 
     for name in bucket:
         storage_user_name = parse_udb.inverse_search(user_db, name)
-        obj = renaming_object(name, storage_user_name, bucket[name])
+        obj = renaming_object(name, storage_user_name, bucket[name],destination_root=data_directory)
         obj.execute_move()
+        print(obj.top_levels, "<<----")
+
+        for level in obj.top_levels:
+            permissions.set_permissions(level, storage_user_name)
+            tmp = permissions.check_permissions(level)
+            for _ in tmp:
+                print(_)
 
     n_files = count_files_in_subdirectories(directory)
     print("We have %i files left" % n_files)
@@ -333,7 +364,15 @@ def process_ALS_data(directory, database):
     if n_files < 1:
         print("No files left, will remove all empty directories")
         remove_empty_subdirectories(directory)
+        return True
+    else:
+        # Raise an exception if the number of files is not zero
+        raise RuntimeError(f"Expected 0 files, but found {n_files} files.")
+
+
+
+
 
 
 if __name__ == "__main__":
-    process_ALS_data("./", "../data.base")
+    process_ALS_data("sbdatacore_test", "incoming/data.base")

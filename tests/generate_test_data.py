@@ -53,7 +53,6 @@ def build_ALS_data(base_dir, user, date, puck, pin, collect, screen_sets, collec
 
 def simulate_ALS_runs(base_dir):
     base_dir = os.path.join(base_dir, "incoming")
-    print("---->", base_dir)
     users = ["kamala", "kamala", "mike", "mike", "mike"]
     dates = ["12323", "121223", "010124", "021224", "021224"]
     pucks = ["snoopy", "peanut", "mother", "mother", "mother"]
@@ -61,7 +60,6 @@ def simulate_ALS_runs(base_dir):
     collect = [True, True, False, True, True]
     for u, d, pu, pi, c in zip(users, dates, pucks, pins, collect):
         tmp = build_ALS_data(base_dir, u, d, pu, pi, c, 1, 1)
-        print(">>>",tmp)
         screen_path = tmp['screen_path']
         if screen_path is not None:
             os.makedirs(screen_path, exist_ok=True)
@@ -71,7 +69,6 @@ def simulate_ALS_runs(base_dir):
 
         collect_path = tmp['collect_path'] if tmp['collect_path'] else None  # Update the path
         if collect_path is not None:
-            print(collect_path, tmp['xds_path'])
             os.makedirs(collect_path, exist_ok=True)
             os.makedirs(os.path.join(tmp['xds_path']), exist_ok=True)
             os.makedirs(os.path.join(tmp['dials_path']), exist_ok=True)
@@ -91,12 +88,13 @@ mpence mikey"""
     print(userdatabase,file=f)
 
 
-
-
-
-
-if __name__ == "__main__":
+def run():
     os.makedirs("sbdatacore_test/incoming", exist_ok=True)  # Create incoming directory
     os.makedirs("sbdatacore_test/data", exist_ok=True)      # Create data directory
     build_fake_database("sbdatacore_test/data.base")        # Update the database file path
     simulate_ALS_runs("sbdatacore_test/")
+
+
+
+if __name__ == "__main__":
+    run()

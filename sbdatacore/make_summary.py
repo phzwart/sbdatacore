@@ -1,5 +1,5 @@
 import os
-import ranges  # Ensure you have the 'ranges' module imported
+from sbdatacore import ranges  # Ensure you have the 'ranges' module imported
 
 def list_dirs_with_file_count(startpath):
     """
